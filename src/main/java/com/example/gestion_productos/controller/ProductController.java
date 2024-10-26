@@ -1,9 +1,7 @@
 package com.example.gestion_productos.controller;
 
-import com.example.gestion_productos.exception.ResourceNotFoundException;
 import com.example.gestion_productos.model.Product;
-import com.example.gestion_productos.repository.ProductRepository;
-import jakarta.validation.Valid;
+import com.example.gestion_productos.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,61 +14,35 @@ import java.util.List;
 public class ProductController {
 
     @Autowired
-    private ProductRepository productRepository;
+    private ProductService productService;
 
-    // Obtener todos los productos
     @GetMapping
     public List<Product> getAllProducts() {
-        return productRepository.findAll();
+        return productService.getAllProducts();
     }
 
-    // Obtener un producto por ID
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
-        return ResponseEntity.ok(product);
+        return productService.getProductById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    // Crear un nuevo producto
     @PostMapping
-    public ResponseEntity<?> createProduct(@Valid @RequestBody Product product) {
-        try {
-            Product newProduct = productRepository.save(product);
-            return ResponseEntity.status(HttpStatus.CREATED).body(newProduct);
-        } catch (Exception e) {
-            // Log de error detallado
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al crear el producto: " + e.getMessage());
-        }
+    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
+        Product newProduct = productService.createProduct(product);
+        return ResponseEntity.status(HttpStatus.CREATED).body(newProduct);
     }
 
-    // Actualizar un producto existente
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @Valid @RequestBody Product productDetails) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
-        
-        product.setName(productDetails.getName());
-        product.setDescription(productDetails.getDescription());
-        product.setPrice(productDetails.getPrice());
-        product.setStock(productDetails.getStock());
-        product.setCategoryId(productDetails.getCategoryId());
-        product.setImageUrl(productDetails.getImageUrl());
-        product.setBrand(productDetails.getBrand());
-        product.setRating(productDetails.getRating());
-        product.setAvailable(productDetails.getAvailable());
-
-        Product updatedProduct = productRepository.save(product);
+    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product productDetails) {
+        Product updatedProduct = productService.updateProduct(id, productDetails);
         return ResponseEntity.ok(updatedProduct);
     }
 
-    // Eliminar un producto
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
-        productRepository.delete(product);
+        productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
     }
 }
